@@ -239,7 +239,7 @@ def plt_sim_res(res, note):
             title = f"{key}_{sim}_results"
             for head in range(head_nums):
                 y = [sample[head][sim] for sample in res[key]]
-                plt.scatter(x, y, marker='.', c=COLOR[head], label=f'head {head}', s=1)
+                plt.plot(x, y, c=COLOR[head], label=f'head {head}', linewidth=1)
             plt.xlabel('Sample index')
             plt.ylabel('Results')
             plt.title(title)
