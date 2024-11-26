@@ -7,13 +7,13 @@ from tqdm import trange
 import time
 from datasets import load_dataset
 
-MODEL = "../../models/opt/opt-125m"
-device = "cpu"
+MODEL = "../models/opt/opt-125m"
+device = "cuda"
 
 config = AutoConfig.from_pretrained(MODEL)
 tokenizer = GPT2Tokenizer.from_pretrained(MODEL)
 config.enable_bias = True
-config.num_hidden_layers = 1
+# config.num_hidden_layers = 1
 model = OPTForCausalLM.from_pretrained(MODEL, config=config)
 
 model.to(device)
@@ -28,7 +28,7 @@ generation_config.output_hidden_states = True
 generation_config.output_scores = True
 
 # test = load_dataset("../../datasets/wikitext", "wikitext-2-raw-v1", split="test")
-test = load_dataset("../../datasets/c4", split="validation")
+test = load_dataset("../datasets/c4", split="validation")
 test_len = test.num_rows
 # test = [{"text":"Today is a sunny day"}]
 # test_len = 2000
@@ -73,7 +73,7 @@ for idx in trange(test_len):
     ppl = torch.exp(avg_nll)
     total_ppl += ppl
 print(f"PPL: {total_ppl / test_len}")
-
+# 25.046875
 
 
 
