@@ -140,3 +140,16 @@ def compress_QK_per_head(model, config, method):
             k_linear.bias = nn.Parameter(torch.tensor(k_bias, dtype=torch.float32))
         model.model.decoder.layers[idx].self_attn.k_proj = k_linear
     return model
+
+
+def compress_QK_w_inverse_per_head(model, config):
+    tgt_layer_idx = [x for x in range(0,config.num_hidden_layers)]
+    for idx in range(config.num_hidden_layers):
+        if idx not in tgt_layer_idx: continue
+        q_weight = model.model.decoder.layers[idx].self_attn.q_proj.weight.detach().numpy().T
+        q_split = np.hsplit(q_weight, config.num_attention_heads)
+        new_q = []
+        for q in q_split:
+            # new_q.append(LOW_RANK_METHOD[method](q))
+            pass
+
