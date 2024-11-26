@@ -38,7 +38,7 @@ for idx in trange(test_len):
     prompt = (test[idx]["text"])
     model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
     outputs = model.generate(**model_inputs, generation_config=generation_config)
-    attn_base.append(outputs.attentions[0][0][0].numpy())
+    attn_base.append(outputs.attentions[0][0][0].to("cpu").numpy())
 
 # embed()
 def show_outputs(model, model_inputs, outputs):
@@ -234,7 +234,7 @@ for key in LOW_RANK_METHOD:
         prompt = (test[idx]["text"])
         model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
         outputs = model.generate(**model_inputs, generation_config=generation_config)
-        attn_method.append(outputs.attentions[0][0][0].numpy())
+        attn_method.append(outputs.attentions[0][0][0].to("cpu").numpy())
     out_total[key] = attn_method
     # print(f"Method: {key} takes {end_time - start_time}s")
 print("="*50)
@@ -258,7 +258,7 @@ for key in LOW_RANK_METHOD:
         prompt = (test[idx]["text"])
         model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
         outputs = model.generate(**model_inputs, generation_config=generation_config)
-        attn_method.append(outputs.attentions[0][0][0].numpy())
+        attn_method.append(outputs.attentions[0][0][0].to("cpu").numpy())
     out_per_head[key] = attn_method
     # print(f"Method: {key} takes {end_time - start_time}s")
 print("="*100)
