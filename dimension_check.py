@@ -7,8 +7,8 @@ from tqdm import trange
 import time
 from datasets import load_dataset
 
-MODEL = "../../models/opt/opt-125m"
-device = "cpu"
+MODEL = "../models/opt/opt-125m"
+device = "cuda"
 
 config = AutoConfig.from_pretrained(MODEL)
 tokenizer = GPT2Tokenizer.from_pretrained(MODEL)
@@ -29,16 +29,18 @@ generation_config.output_hidden_states = True
 generation_config.output_scores = True
 
 # test = load_dataset("../../datasets/wikitext", "wikitext-2-raw-v1", split="test")
-test = load_dataset("../../datasets/c4", split="validation")
+test = load_dataset("../datasets/c4", split="validation")
 test_len = test.num_rows
 # test = [{"text":"Today is a sunny day"}]
-test_len = 10
+test_len = 2000
+MAX_LENGTH = config.max_position_embeddings
 attn_base = []
+print("BASE:")
 for idx in trange(test_len):
     prompt = (test[idx]["text"])
-    model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
+    model_inputs = tokenizer([prompt], return_tensors="pt", truncation=True, max_length=MAX_LENGTH-1).to(device)
     outputs = model.generate(**model_inputs, generation_config=generation_config)
-    attn_base.append(outputs.attentions[0][0][0].to("cpu").numpy())
+    attn_base.append(outputs.attentions[0][0][0].half().to("cpu").numpy())
 
 # embed()
 def show_outputs(model, model_inputs, outputs):
@@ -99,7 +101,7 @@ def tsne(X, ratios=0.5):
 
 LOW_RANK_METHOD = {
     "PCA": pca,
-    "RP": random_projection,
+    # "RP": random_projection,
     # "ICA": ica,
     # "MDS": mds_dimensionality_reduction,
     # "vt": variance_threshold,
@@ -223,52 +225,6 @@ def similarity(base, out):
         sim.append(res)
     return sim
 
-import modyfied_opt
-out_total = {}
-for key in LOW_RANK_METHOD:
-    start_time = time.time()
-    compress_QK_total(model, config, key)
-    end_time = time.time()
-    attn_method = []
-    for idx in trange(test_len):
-        prompt = (test[idx]["text"])
-        model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
-        outputs = model.generate(**model_inputs, generation_config=generation_config)
-        attn_method.append(outputs.attentions[0][0][0].to("cpu").numpy())
-    out_total[key] = attn_method
-    # print(f"Method: {key} takes {end_time - start_time}s")
-print("="*50)
-sim_res_total = {} # sim_res_total[compress_method][sample_index][head_idx][sim_method]
-for key in out_total:
-    res = []
-    for idx in trange(test_len):
-        res.append(similarity(attn_base[idx], out_total[key][idx]))
-    sim_res_total[key] = res
-del model
-model = OPTForCausalLM.from_pretrained(MODEL, config=config)
-model.to(device)
-
-out_per_head = {}
-for key in LOW_RANK_METHOD:
-    start_time = time.time()
-    compress_QK_per_head(model, config, key)
-    end_time = time.time()
-    attn_method = []
-    for idx in trange(test_len):
-        prompt = (test[idx]["text"])
-        model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
-        outputs = model.generate(**model_inputs, generation_config=generation_config)
-        attn_method.append(outputs.attentions[0][0][0].to("cpu").numpy())
-    out_per_head[key] = attn_method
-    # print(f"Method: {key} takes {end_time - start_time}s")
-print("="*100)
-sim_res_per_head = {} # sim_res_per_head[compress_method][sample_index][head_idx][sim_method]
-for key in out_per_head:
-    res = []
-    for idx in trange(test_len):
-        res.append(similarity(attn_base[idx], out_per_head[key][idx]))
-    sim_res_per_head[key] = res
-
 import matplotlib.pyplot as plt
 COLOR = ['#FF7F50', '#008080', '#FFFF00', '#800080', '#FFA500', '#00FFFF', 
          '#808000', '#FF0000', '#0000FF', '#8B4513', '#A020F0', '#F0E68C']
@@ -292,5 +248,58 @@ def plt_sim_res(res, note):
             plt.savefig(f"./figure/{note}_{title}.png", dpi=300)
             plt.clf()
 
+import modyfied_opt
+out_total = {}
+print("TOTAL:")
+for key in LOW_RANK_METHOD:
+    del model
+    model = OPTForCausalLM.from_pretrained(MODEL, config=config)
+    start_time = time.time()
+    compress_QK_total(model, config, key)
+    end_time = time.time()
+    model.to(device)
+    attn_method = []
+    print(f"{key}:")
+    for idx in trange(test_len):
+        prompt = (test[idx]["text"])
+        model_inputs = tokenizer([prompt], return_tensors="pt", truncation=True, max_length=MAX_LENGTH-1).to(device)
+        outputs = model.generate(**model_inputs, generation_config=generation_config)
+        attn_method.append(outputs.attentions[0][0][0].half().to("cpu").numpy())
+    out_total[key] = attn_method
+    # print(f"Method: {key} takes {end_time - start_time}s")
+sim_res_total = {} # sim_res_total[compress_method][sample_index][head_idx][sim_method]
+for key in out_total:
+    res = []
+    for idx in trange(test_len):
+        res.append(similarity(attn_base[idx], out_total[key][idx]))
+    sim_res_total[key] = res
+del out_total
 plt_sim_res(sim_res_total, "Total")
+del sim_res_total
+
+out_per_head = {}
+print("PER_HEAD:")
+for key in LOW_RANK_METHOD:
+    del model
+    model = OPTForCausalLM.from_pretrained(MODEL, config=config)
+    start_time = time.time()
+    compress_QK_per_head(model, config, key)
+    end_time = time.time()
+    model.to(device)
+    attn_method = []
+    print(f"{key}:")
+    for idx in trange(test_len):
+        prompt = (test[idx]["text"])
+        model_inputs = tokenizer([prompt], return_tensors="pt", truncation=True, max_length=MAX_LENGTH-1).to(device)
+        outputs = model.generate(**model_inputs, generation_config=generation_config)
+        attn_method.append(outputs.attentions[0][0][0].half().to("cpu").numpy())
+    out_per_head[key] = attn_method
+    # print(f"Method: {key} takes {end_time - start_time}s")
+sim_res_per_head = {} # sim_res_per_head[compress_method][sample_index][head_idx][sim_method]
+for key in out_per_head:
+    res = []
+    for idx in trange(test_len):
+        res.append(similarity(attn_base[idx], out_per_head[key][idx]))
+    sim_res_per_head[key] = res
+
 plt_sim_res(sim_res_per_head, "Per_head")
