@@ -8,14 +8,14 @@ import time
 from datasets import load_dataset
 import modyfied_opt
 
-MODEL = "../../models/opt/opt-125m"
-device = "cpu"
+MODEL = "../models/opt/opt-125m"
+device = "cuda"
 
 config = AutoConfig.from_pretrained(MODEL)
 tokenizer = GPT2Tokenizer.from_pretrained(MODEL)
 
 # test = load_dataset("../../datasets/wikitext", "wikitext-2-raw-v1", split="test")
-test = load_dataset("../../datasets/c4", split="validation")
+test = load_dataset("../datasets/c4", split="validation")
 test_len = test.num_rows
 # test = [{"text":"Today is a sunny day"}]
 # test_len = 2000
@@ -61,10 +61,19 @@ def ppl(model):
         avg_nll = nll_sum / n_tokens  # average negative log-likelihood per token
         ppl = torch.exp(avg_nll)
         total_ppl += ppl
-    return total_ppl
+    return total_ppl / test_len
 
 from packages import LOW_RANK_METHOD, compress_QK_total, compress_QK_per_head
 model = None
+for key in LOW_RANK_METHOD:
+    del model
+    model = OPTForCausalLM.from_pretrained(MODEL, config=config)
+    model = compress_QK_per_head(model, config, key)
+    model.to(device)
+    print(f"{key}_per_head:")
+    res = ppl(model)
+    print(f"{key}_per_head: {res}")
+exit()
 for key in LOW_RANK_METHOD:
     del model
     model = OPTForCausalLM.from_pretrained(MODEL, config=config)
@@ -74,13 +83,17 @@ for key in LOW_RANK_METHOD:
     res = ppl(model)
     print(f"{key}_total: {res}")
 
-for key in LOW_RANK_METHOD:
-    del model
-    model = OPTForCausalLM.from_pretrained(MODEL, config=config)
-    model = compress_QK_per_head(model, config, key)
-    model.to(device)
-    print(f"{key}_per_head:")
-    res = ppl(model)
-    print(f"{key}_per_head: {res}")
 
 
+
+# total:
+#  3257.336507249513
+#  3674.863160931977
+#  5843.248358941066
+#  
+
+# per head:
+#  2036.6119384765625
+#  2519.150390625
+#  5680.095703125
+#  
