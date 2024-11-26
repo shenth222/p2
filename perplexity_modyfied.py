@@ -6,14 +6,13 @@ import numpy as np
 from tqdm import trange
 import time
 from datasets import load_dataset
+import modyfied_opt
 
 MODEL = "../../models/opt/opt-125m"
 device = "cpu"
 
 config = AutoConfig.from_pretrained(MODEL)
 tokenizer = GPT2Tokenizer.from_pretrained(MODEL)
-config.enable_bias = True
-config.num_hidden_layers = 1
 
 # test = load_dataset("../../datasets/wikitext", "wikitext-2-raw-v1", split="test")
 test = load_dataset("../../datasets/c4", split="validation")
@@ -71,6 +70,7 @@ for key in LOW_RANK_METHOD:
     model = OPTForCausalLM.from_pretrained(MODEL, config=config)
     compress_QK_total(model, config, key)
     model.to(device)
+    print(f"{key}_total:")
     res = ppl(model)
     print(f"{key}_total: {res}")
 
@@ -79,6 +79,7 @@ for key in LOW_RANK_METHOD:
     model = OPTForCausalLM.from_pretrained(MODEL, config=config)
     model = compress_QK_per_head(model, config, key)
     model.to(device)
+    print(f"{key}_per_head:")
     res = ppl(model)
     print(f"{key}_per_head: {res}")
 
