@@ -74,7 +74,7 @@ for idx in trange(test_len):
     total_ppl += ppl
 print(f"PPL: {total_ppl / test_len}")
 # 25.046875
-
+print(torch.cuda.max_memory_allocated())
 
 
 

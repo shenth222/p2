@@ -73,6 +73,7 @@ for key in LOW_RANK_METHOD:
     print(f"{key}_per_head:")
     res = ppl(model)
     print(f"{key}_per_head: {res}")
+print(torch.cuda.max_memory_allocated())
 exit()
 for key in LOW_RANK_METHOD:
     del model
@@ -93,7 +94,7 @@ for key in LOW_RANK_METHOD:
 #  
 
 # per head:
-#  2036.6119384765625
+#  2120.930419921875
 #  2519.150390625
 #  5680.095703125
 #  

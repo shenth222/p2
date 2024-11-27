@@ -51,9 +51,9 @@ def tsne(X, ratios=0.5):
 
 LOW_RANK_METHOD = {
     "PCA": pca,
-    "RP": random_projection,
-    "ICA": ica,
-    "MDS": mds_dimensionality_reduction,
+    # "RP": random_projection,
+    # "ICA": ica,
+    # "MDS": mds_dimensionality_reduction,
     # "vt": variance_threshold,
     # "tsne": tsne
 }
@@ -97,7 +97,7 @@ def compress_QK_total(model, config, method):
     return model
 
 def compress_QK_per_head(model, config, method):
-    tgt_layer_idx = [x for x in range(0,config.num_hidden_layers)]
+    tgt_layer_idx = [x for x in range(3,9)]
     for idx in range(config.num_hidden_layers):
         if idx not in tgt_layer_idx: continue
         q_weight = model.model.decoder.layers[idx].self_attn.q_proj.weight.detach().numpy().T
